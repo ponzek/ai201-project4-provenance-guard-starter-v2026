@@ -1,9 +1,6 @@
 # Acceptance criteria — Provenance Guard
 
-Five criteria that say what "working" means for this service, written in unit 7
-**before** you built it.
-
-**All five are yours.** None are given.
+These are my five targets for checking whether my service works. The code was started before I wrote these criteria.
 
 An acceptance criterion names a number or something plainly observable. *"The
 detector is accurate"* is an opinion — and perfect AI detection isn't possible
@@ -42,63 +39,83 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
 
-<!-- Your criterion. It must name a number. -->
+## 1. Avoid wrongly accusing human writers
 
+I will test 10 human-written passages. No more than 1 out of 10
+should receive the high-confidence AI label in each of three trials.
 
-
-**Why this target:**
-
-
-
----
-
-## 2.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+**Why this target:** I do not want someone who wrote their own work
+to be wrongly accused of using AI. Simple writing can get a high AI
+score, so I want my system to be careful.
 
 ---
 
-## 3.
+## 2. Check the difference between scores
 
-<!-- Your criterion. -->
+I will test 10 human-written passages and 10 AI-generated passages
+with similar topics and lengths. The average combined score (the
+`confidence` field) for the AI set should be at
+least 0.20 higher than the average for the human set in each of three trials.
+I will record where the passages came from before testing.
 
-
-
-**Why this target:**
-
-
-
----
-
-## 4.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+**Why this target:** My two signals check predictability and writing
+patterns. I want their combined scores to show a noticeable difference
+between these groups, even though they cannot prove who wrote something.
 
 ---
 
-## 5.
+## 3. Make all three labels possible
 
-<!-- Your criterion. -->
+I will check that scores of 0 and 0.35 return human, 0.525 returns
+unsure, and 0.70 and 1 return AI. I will also submit 12 passages and
+check that each of the three labels appears at least once.
 
+**Why this target:** My cutoffs are 0.35 and 0.70. I want to check
+that both boundaries work and that the system can say unsure
+instead of forcing every result into human or AI.
 
+---
 
-**Why this target:**
+## 4. Make sure appeals are recorded
 
+I will appeal five different submissions using their content IDs.
+All five appeals should be confirmed and added to the log with
+the status under_review and the writer's reasoning. The original
+decisions should stay in the log.
 
+**Why this target:** Both signals can make mistakes. Writers need
+a way to challenge a result, and I want to keep a record of both
+the original decision and their appeal.
+
+---
+
+## 5. Handle invalid and meaningless input safely
+
+I will test six invalid inputs: missing text, empty text, text containing
+only spaces, a number instead of text, text containing 20,001
+characters, and a request body that is not valid JSON. All six should
+return a 4xx response with a clear JSON error and no successful
+submission.
+
+I will also submit these three exact strings as `text`:
+
+1. `!!!!!!!!`
+2. `........`
+3. `😀😀😀😀😀😀😀😀`
+
+For each one, success means either a 4xx JSON error, or a successful
+response whose `guess` is not `"ai"`. If any of the three returns
+`guess` equal to `"ai"`, I miss this target.
+
+**Why this target:** My service accepts up to 20,000 characters, and
+missing or invalid text should get a clear error instead of a
+misleading label. The second part is the harder test: my style signal
+returns a neutral 0.5 when there are fewer than five words, and the
+model signal may find repeated symbols very predictable, which could push
+the combined score toward the AI label. Accusing someone because of
+symbols with no meaning is the kind of wrong accusation I most want
+to avoid.
 
 ---
 
