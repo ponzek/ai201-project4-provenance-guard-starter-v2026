@@ -64,8 +64,14 @@ def sentence_length_spread(text: str) -> float:
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
     """
-    # TODO: replace this
-    return 0.0
+    # Scale: coefficient of variation (stdev / mean of sentence word counts).
+    # HIGHER = more varied = more human. A single sentence has no spread -> 0.0.
+    lengths = [len(words(s)) for s in sentences(text)]
+    lengths = [n for n in lengths if n > 0]
+    if len(lengths) < 2:
+        return 0.0
+    mean = statistics.mean(lengths)
+    return statistics.stdev(lengths) / mean if mean else 0.0
 
 
 def type_token_ratio(text: str) -> float:
@@ -80,8 +86,10 @@ def type_token_ratio(text: str) -> float:
     directly comparable on it, and if your test inputs vary a lot in length,
     that alone can look like a signal.
     """
-    # TODO: replace this
-    return 0.0
+    # Only the first 100 words count, so long and short texts are comparable.
+    # HIGHER = more varied vocabulary = more human.
+    w = words(text)[:100]
+    return len(set(w)) / len(w) if w else 0.0
 
 
 def punctuation_density(text: str) -> float:
@@ -94,8 +102,13 @@ def punctuation_density(text: str) -> float:
         more interesting than full stops, because they vary more between
         writers.
     """
-    # TODO: replace this
-    return 0.0
+    # Counts commas, semicolons, colons, dashes, parentheses and quotes per
+    # word; full stops are ignored. HIGHER = more varied punctuation = more human.
+    w = words(text)
+    if not w:
+        return 0.0
+    marks = re.findall(r"[,;:()\"\u2014\u2013-]", text)
+    return len(marks) / len(w)
 
 
 # ── Combining them ───────────────────────────────────────────────────────────
@@ -122,8 +135,22 @@ def style_signal(text: str) -> float:
     you trust it. Plain and ordinary, not formal: formal prose reads as *human*
     to signal one, and it is plain writing that gets accused.
     """
-    # TODO: replace this
-    return 0.5
+    # Too little text to judge the shape of -> no opinion.
+    if len(words(text)) < 5:
+        return 0.5
+
+    def clamp(x: float) -> float:
+        return min(max(x, 0.0), 1.0)
+
+    # Each measure -> 0..1 where 1 = AI-ish. All three run "higher = human"
+    # raw, so each is flipped. The divisors/offsets are the rough ranges
+    # seen on ordinary prose.
+    spread_ai = 1.0 - clamp(sentence_length_spread(text) / 0.6)
+    ttr_ai = 1.0 - clamp((type_token_ratio(text) - 0.4) / 0.5)
+    punct_ai = 1.0 - clamp(punctuation_density(text) / 0.15)
+
+    score = 0.45 * spread_ai + 0.30 * ttr_ai + 0.25 * punct_ai
+    return round(clamp(score), 4)
 
 
 if __name__ == "__main__":
