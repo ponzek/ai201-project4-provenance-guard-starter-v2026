@@ -174,6 +174,8 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 - **Lines 6 to 8:** the other three submissions from this run (the thank-you note for the human label, the photograph paragraph for unsure, and the climate paragraph for the split case).
 - **Lines 9 and 10:** the sample run above. Line 9 is the submission and line 10 is the appeal, both with `content_id` `61ecd9a8-ec91-4110-85f8-3a8da8a12cf2`.
 
+**Python version:** All of the scores, requests and log entries above were produced on Python 3.10.10. The course asks for Python 3.11 or newer, and `test.py` flagged that. Afterward I made a second virtual environment with Python 3.13.5, and `test.py` passes there with 9 passed and 0 failed. I did not rerun the sample run on 3.13, so the results above are from 3.10.10.
+
 ---
 
 ## How I Used AI
