@@ -53,6 +53,41 @@ mistakes, so writers can appeal if they disagree with a result.
 7. The service saves the decision in the log and returns the result.
    The writer can use their content ID to submit an appeal.
 
+### A false positive, step by step
+
+This is the recorded case from the Sample Run, content ID `61ecd9a8-ec91-4110-85f8-3a8da8a12cf2`.
+
+1. Someone submits a plain paragraph with short, simple sentences about a cat.
+2. The model signal gives 0.843 because the words are easy to predict. The style signal gives 0.6357 because the sentences are short and even. They are only 0.21 apart, so my cap does not apply.
+3. The combined score is 0.6 x 0.843 + 0.4 x 0.6357 = 0.7601. That is above 0.70, so the label is AI.
+4. The writer sees: "Our tools think this was probably written with the help of AI. They can be wrong. If you wrote it yourself, you can appeal and a person will take a look."
+5. They send their content ID and their reasoning to `/appeal`. The service adds an appeal entry to the log with status `under_review`.
+6. Nothing else changes. The label and scores stay the same, nothing re-checks the text, nobody is notified, and I have not built a way for a reviewer to finish the appeal.
+
+The cat paragraph was written by my coding assistant as an example of plain writing, not by me.
+
+### Endpoint shapes
+
+**`POST /submit`**
+
+```text
+In:  {"text": "...", "creator_id": "..."}
+     text is required, up to 20,000 characters. creator_id is optional and defaults to "anonymous".
+Out: {"content_id": "...", "guess": "ai | human | unsure", "confidence": 0.0,
+      "label": "the full sentence a reader sees", "model_score": 0.0, "style_score": 0.0}
+     confidence is the combined AI-like score, not how sure the system is.
+Errors: {"error": "...", "message": "..."}
+     400 invalid_text, 400 text_too_short, 413 text_too_long, 503 detector_unavailable
+```
+
+**`POST /appeal`**
+
+```text
+In:  {"content_id": "...", "reasoning": "..."}
+Out: {"content_id": "...", "status": "under_review", "message": "..."}
+Errors: 400 invalid_content_id, 400 invalid_reasoning, 404 unknown_content_id
+```
+
 
 ---
 
@@ -95,6 +130,19 @@ mistakes, so writers can appeal if they disagree with a result.
      somewhere else, say where. -->
 
 **A case where my two signals split, and what my rule does with it:** I submitted a short passage that begins "Climate change is one of the most pressing challenges of our time." The model signal gave 0.9104 because the phrases are very predictable. The style signal gave 0.3506 because the sentences differ in length and it has a lot of commas. They are 0.56 apart, which is more than 0.40. The plain weighted average would have been about 0.6865. My rule capped it at 0.65, and the label was unsure. The label would have been unsure without the cap too, so here the cap only lowered the score. The log entry has content_id `3ed8c83f-c9a8-40fd-a9f8-234ae0bb6615`.
+
+**Four test inputs, side by side**
+
+These are the recorded results. My coding assistant wrote all four passages as examples. Each one is in `logs/audit.jsonl`.
+
+| Input | Starts with | model | style | combined | label | Log line |
+|---|---|---|---|---|---|---|
+| Clearly AI | "The implementation of the proposed framework requires careful consideration..." | 0.8552 | 0.6221 | 0.762 | AI | 1 |
+| Clearly human | "Honestly? I burned the toast again, swore at the smoke alarm..." | 0.3119 | 0.0211 | 0.1956 | human | 2 |
+| Formal human | "The committee reviewed the proposal and, after considerable deliberation..." | 0.6216 | 0.4789 | 0.5645 | unsure | 11 |
+| Lightly edited AI | "The implementation of the proposed framework requires careful consideration..." with "it is" changed to "its", one comma removed, and ", which is tricky" added | 0.6955 | 0.5993 | 0.657 | unsure | 12 |
+
+The lightly edited AI text is the clearly AI text with three tiny changes. Its combined score dropped from 0.762 to 0.657, so the label went from AI to unsure. That is one example, not a test, but it shows small edits can move a result.
 
 ---
 
@@ -168,11 +216,12 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 
 **Which entries in `logs/audit.jsonl` are which**
 
-`logs/audit.jsonl` has 10 lines. I kept all of them.
+`logs/audit.jsonl` has 12 lines. I kept all of them.
 
 - **Lines 1 to 5:** earlier test entries (creator `me`, plus one rejected empty request). They were made before `criteria.md` was written. The file was missing these five lines before the run below, so they were restored by copying the original entries exactly.
 - **Lines 6 to 8:** the other three submissions from this run (the thank-you note for the human label, the photograph paragraph for unsure, and the climate paragraph for the split case).
 - **Lines 9 and 10:** the sample run above. Line 9 is the submission and line 10 is the appeal, both with `content_id` `61ecd9a8-ec91-4110-85f8-3a8da8a12cf2`.
+- **Lines 11 and 12:** the formal human input and the lightly edited AI input from the four-input table. They were added after the sample run so the table would have a logged result for every row.
 
 **Python version:** All of the scores, requests and log entries above were produced on Python 3.10.10. The course asks for Python 3.11 or newer, and `test.py` flagged that. Afterward I made a second virtual environment with Python 3.13.5, and `test.py` passes there with 9 passed and 0 failed. I did not rerun the sample run on 3.13, so the results above are from 3.10.10.
 
