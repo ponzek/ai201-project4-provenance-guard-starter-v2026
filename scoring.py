@@ -52,11 +52,16 @@ def combine_signals(model_score: float, style_score: float) -> float:
     The weights in config.py are placeholders. Change them, or ignore them and
     write a different rule.
     """
-    # TODO: replace this
-    return (
+    # Rule: weighted average (model 0.6, style 0.4 in config.py). If the
+    # signals disagree by more than SPLIT_GAP, the result is capped just below
+    # the AI threshold: one signal alone can never produce "high-confidence AI".
+    score = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
     )
+    if abs(model_score - style_score) > config.SPLIT_GAP:
+        score = min(score, config.AI_THRESHOLD - 0.05)
+    return round(min(max(score, 0.0), 1.0), 4)
 
 
 def score_to_label(score: float) -> tuple[str, str]:
@@ -85,12 +90,19 @@ def score_to_label(score: float) -> tuple[str, str]:
     think if they got it on their own work. That question is the whole
     milestone.
     """
-    # TODO: replace this — thresholds are in config.py
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
+        return "ai", (
+            "Our tools think this was probably written with the help of AI. "
+            "They can be wrong. If you wrote it yourself, you can appeal and a "
+            "person will take a look."
+        )
     if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+        return "human", "We think this was probably written by a person."
+    return "unsure", (
+        "We can't tell. This text has some features of both human and AI "
+        "writing, and plenty of people write this way. Nothing is being "
+        "held against you."
+    )
 
 
 def label_ranges() -> list[tuple[str, str]]:
