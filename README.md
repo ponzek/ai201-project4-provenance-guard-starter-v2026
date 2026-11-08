@@ -245,9 +245,15 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 
 ---
 
+## Stretch
+
+**Declared before building:** I am going for **a second measured improvement**. After my first fix, I will make one more change based on my diagnoses, run my criteria and the attack set again, and say whether it helped.
+
+---
+
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 5 per minute, 50 per day
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
@@ -255,17 +261,31 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
      thresholds. Your numbers have to be liveable for the first and hostile to
      the second. -->
 
+A real writer submits their own work a few times an hour, maybe a couple more times if they fix a typo. 5 a minute and 50 a day never gets in their way. A script trying to find my thresholds needs hundreds or thousands of tries. At 50 a day that would take weeks for one account. I did not go lower than 5 a minute because the first submission is slow while the model loads, and someone who clicks again out of impatience should not get blocked.
+
 **What a caller counts as:** <!-- per address, or per creator_id? They fail
 differently — one script can look like a thousand callers, and one household
 can look like one. -->
+
+The `creator_id` they send. If there is no `creator_id`, it falls back to their address. This is good for people who share one address, like a family or a classroom, because each writer gets their own limit. The problem is that anyone can type any `creator_id`, so a script that changes its name on every request never gets blocked.
 
 **The run of status codes when I pushed past it:**
 
 <!-- python run_attacks.py --flood 15 -->
 
-```
+From `run_attacks.py::run_flood`, saved in `results/flood_2026-11-08_1839.md`:
 
 ```
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
+```
+
+Every 429 is written to the audit log. This is one of them from `GET /log`. It has all nine fields, with `null` where there was no decision:
+
+```json
+{"combined_score":null,"content_id":null,"creator_id":"flood_tester","event":"rejected","guess":null,"label":null,"limit":"5 per 1 minute","model_score":null,"reason":"rate_limited","status":"rejected","style_score":null,"timestamp":"2026-11-08T23:39:34+00:00"}
+```
+
+`results/flood_2026-11-08_1836.md` is an earlier run of the same test, from before I added the missing fields to rejected entries.
 
 ---
 
