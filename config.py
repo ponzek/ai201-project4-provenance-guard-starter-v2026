@@ -79,7 +79,9 @@ MAX_TEXT_CHARS = 20000
 # that decide who pays for it.
 
 HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.70
+# Unit 8, improvement 1: was 0.70. All four false positives (two of my own
+# pieces, FP03, FP05) scored 0.702-0.734, just over the old line.
+AI_THRESHOLD = 0.75
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub

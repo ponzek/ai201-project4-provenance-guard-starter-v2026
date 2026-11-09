@@ -550,20 +550,113 @@ I have 3 missed criteria and 14 broken attacks. They come down to three problems
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** I moved the AI line up from 0.70 to 0.75 (`AI_THRESHOLD` in `config.py`). Nothing else changed. My split rule caps the score at `AI_THRESHOLD - 0.05`, so the same setting also moved the cap from 0.65 to 0.70.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** Problem 1. All four false positives (two of my own pieces, FP03 and FP05) scored between 0.702 and 0.734. Both signals were wrong together on them, so the cap never helped. The only stage where I could protect these writers without rebuilding a signal was the label line.
 
 ### Attack Run — After
 
 <!-- Same format. `run_attacks.py --label after` -->
 
+I ran all 56 attacks again with `python run_attacks.py --set attack_set --label after`. The output is in `results/attack_run_2026-11-08_2024_after.md`. I used the same held-or-broke rules as before.
 
+**Result: 12 broke, 44 held** (before: 14 broke, 42 held).
+
+| Family | Attacks | Broke before | Broke after |
+|---|---|---|---|
+| evasion | 10 | 9 | 9 |
+| false_positive | 8 | 2 | **0** |
+| prompt_injection | 6 | 3 | 3 |
+| malformed | 20 | 0 | 0 |
+| flood_same_creator | 12 | 0 | 0 |
+
+| ID | Family | Targeting | Status | Guess | Combined | Model | Style | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| EV01 | evasion | signal two: typos raise word variety | 200 | human | 0.306 | 0.164 | 0.519 | **BROKE** |
+| EV02 | evasion | signal two: broken-up sentences raise length spread | 200 | unsure | 0.446 | 0.594 | 0.222 | **BROKE** |
+| EV03 | evasion | signal two: a pasted quotation changes the shape | 200 | unsure | 0.512 | 0.666 | 0.281 | **BROKE** |
+| EV04 | evasion | signal one: unusual words raise perplexity | 200 | unsure | 0.563 | 0.611 | 0.489 | **BROKE** |
+| EV05 | evasion | both signals: heavy human editing pass | 200 | human | 0.267 | 0.321 | 0.187 | **BROKE** |
+| EV06 | evasion | signal two: one very long sentence and one very short | 200 | unsure | 0.458 | 0.573 | 0.286 | **BROKE** |
+| EV07 | evasion | signal two: padding with punctuation | 200 | unsure | 0.562 | 0.586 | 0.526 | **BROKE** |
+| EV08 | evasion | signal one: text below the token window | 200 | human | 0.342 | 0.245 | 0.488 | **BROKE** |
+| EV09 | evasion | both: AI text with a human opening paragraph bolted on | 200 | unsure | 0.531 | 0.704 | 0.271 | **BROKE** |
+| EV10 | evasion | signal two: repeated stanza structure | 200 | ai | 0.869 | 0.979 | 0.705 | HELD |
+| FP01 | false_positive | plain, clear human writing with no flourishes | 200 | unsure | 0.548 | 0.618 | 0.445 | HELD |
+| FP02 | false_positive | human writing in a formal register | 200 | unsure | 0.688 | 0.739 | 0.612 | HELD |
+| FP03 | false_positive | a non-native English speaker writing carefully | 200 | unsure | 0.707 | 0.805 | 0.560 | HELD |
+| FP04 | false_positive | a student essay written to a rubric | 200 | unsure | 0.682 | 0.833 | 0.455 | HELD |
+| FP05 | false_positive | technical documentation written by a person | 200 | unsure | 0.734 | 0.800 | 0.633 | HELD |
+| FP06 | false_positive | a person imitating a formal template | 200 | unsure | 0.682 | 0.881 | 0.384 | HELD |
+| FP07 | false_positive | human writing that repeats a phrase deliberately | 200 | unsure | 0.700 | 0.882 | 0.459 | HELD |
+| FP08 | false_positive | very short genuine human submission | 200 | human | 0.344 | 0.322 | 0.375 | HELD |
+| PI01 | prompt_injection | instruction to ignore the check | 200 | unsure | 0.378 | 0.463 | 0.250 | **BROKE** |
+| PI02 | prompt_injection | instruction disguised as a system message | 200 | human | 0.193 | 0.204 | 0.176 | **BROKE** |
+| PI03 | prompt_injection | instruction wrapped in the writer's voice | 200 | unsure | 0.497 | 0.594 | 0.352 | **BROKE** |
+| PI04 | prompt_injection | attempt to make the label text hostile | 200 | unsure | 0.417 | 0.500 | 0.294 | HELD |
+| PI05 | prompt_injection | attempt to inject into the audit log | 200 | unsure | 0.423 | 0.640 | 0.096 | HELD |
+| PI06 | prompt_injection | instruction plus real human text | 200 | unsure | 0.510 | 0.558 | 0.438 | HELD |
+| MF01 | malformed | text is only whitespace | 400 | — | — | — | — | HELD |
+| MF02 | malformed | text is a single character | 400 | — | — | — | — | HELD |
+| MF03 | malformed | text is control characters | 200 | human | 0.200 | 0.000 | 0.500 | HELD |
+| MF04 | malformed | text is only punctuation | 200 | human | 0.207 | 0.011 | 0.500 | HELD |
+| MF05 | malformed | text is a very long single word | 200 | unsure | 0.700 | 0.998 | 0.500 | HELD |
+| MF06 | malformed | text is emoji only | 200 | unsure | 0.700 | 0.997 | 0.500 | HELD |
+| MF07 | malformed | text is right-to-left script | 200 | unsure | 0.700 | 0.906 | 0.500 | HELD |
+| MF08 | malformed | text is 60,000 characters | 413 | — | — | — | — | HELD |
+| RQ01 | malformed | no text field at all | 400 | — | — | — | — | HELD |
+| RQ02 | malformed | no creator_id | 200 | unsure | 0.424 | 0.239 | 0.700 | HELD |
+| RQ03 | malformed | text is a number | 400 | — | — | — | — | HELD |
+| RQ04 | malformed | text is a list | 400 | — | — | — | — | HELD |
+| RQ05 | malformed | text is null | 400 | — | — | — | — | HELD |
+| RQ06 | malformed | creator_id is an object | 200 | human | 0.230 | 0.049 | 0.500 | HELD |
+| RQ07 | malformed | body is a JSON array, not an object | 400 | — | — | — | — | HELD |
+| RQ08 | malformed | body is unparseable JSON | 400 | — | — | — | — | HELD |
+| RQ09 | malformed | body is empty | 400 | — | — | — | — | HELD |
+| RQ10 | malformed | body is form-encoded, not JSON | 429 | — | — | — | — | HELD |
+| RQ11 | malformed | body is JSON claiming to be plain text | 429 | — | — | — | — | HELD |
+| RQ12 | malformed | deeply nested JSON | 400 | — | — | — | — | HELD |
+| FL01_01 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_02 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_03 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_04 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_05 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_06 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_07 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_08 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_09 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_10 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_11 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_12 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+
+### Run Log — After
+
+`python run_eval.py --label after` (`results/run_2026-11-08_2025_after.md`) and `python criteria_extra.py --label after` (`results/criteria_extra_2026-11-08_2026_after.md`). I did not change my criteria or my tests. The boundary check still expects 0.70 to return "ai", because that is what criterion 3 says.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict | Before |
+|---|---|---|---|---|---|---|
+| 1. My own writing flagged as AI | ≤ 1 of 10 | 0/10 | 0/10 | 0/10 | **MET** | MISSED (2/10) |
+| 2. AI set average minus my writing's average | ≥ +0.20 | −0.024 | −0.024 | −0.024 | MISSED | MISSED (−0.023) |
+| 3. Boundary scores correct, and all three labels appear in 12 passages | 5 of 5 boundaries, 3 of 3 labels | 4/5, 1 of 3 labels | 4/5, 1 of 3 labels | 4/5, 1 of 3 labels | MISSED | MISSED (5/5, 2 of 3) |
+| 4. Appeals confirmed and logged, original kept | 5 of 5 | 5/5 | 5/5 | 5/5 | MET | MET |
+| 5. Invalid input gets a 4xx, junk text never gets "ai" | 6 of 6 and 3 of 3 | 6/6, 3/3 | 6/6, 3/3 | 6/6, 3/3 | MET | MET |
 
 **Did it help, and how do I know:**
 
 <!-- Widening the unsure band usually fixes one problem and creates another.
      Reporting that trade honestly is worth full credit. -->
+
+**It helped the problem it was aimed at.** The false-positive family went from 2 broke to 0, and criterion 1 went from MISSED (2 of my 10 pieces labelled AI) to MET (0 of 10, in all three trials). FP03, the worst outcome from my first run, now gets "unsure" instead of an accusation. I know because the scores did not change at all. FP03 is still 0.707 and my dashboard piece is still 0.702. Only the line they are compared to moved.
+
+**What it cost:**
+
+- **The AI label is now almost unreachable.** In my criteria run, not one of the 20 real passages (my 10 and the 10 AI ones) got the AI label. Before, 2 did, and both were my own writing. In the attack set only EV10 still gets it, at 0.869. Any AI text scoring between 0.70 and 0.75 now gets "unsure" instead.
+- **Criterion 3 got worse.** The 0.70 boundary now returns "unsure", so the boundary check dropped from 5/5 to 4/5. The 12 passages now only produce one label instead of two.
+- **The cap loosened.** Because the cap is tied to the AI line, junk text the model loves now lands at exactly 0.700 instead of 0.650 (MF05, MF06, MF07, the emoji in criterion 5), and so does FP07. They still get "unsure", but with less room to spare.
+- **It fixed nothing for evasion.** The evasions and prompt injections were already under the old line, so moving the line up could only help them, never catch them. They still break exactly as before.
+- **Criterion 2 is unchanged.** Thresholds do not change scores, and the AI set still scores lower than my writing.
+
+This is the trade the brief warned about. I chose fewer wrong accusations, and the cost is that the service now almost never says "AI" at all.
 
 
 
