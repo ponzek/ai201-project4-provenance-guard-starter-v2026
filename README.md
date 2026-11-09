@@ -292,6 +292,19 @@ Every 429 is written to the audit log. This is one of them from `GET /log`. It h
 
 `results/flood_2026-11-08_1836.md` is an earlier run of the same test, from before I added the missing fields to rejected entries.
 
+### Per-creator limits (stretch)
+
+My limiter counts per `creator_id` (`app.py::rate_limit_key`). It only falls back to the address when there is no usable `creator_id`. The key function came with the starter, so my part was turning it on, testing it, and writing down what it changes. I tested it with `per_creator_check.py`, sending everything from the same address (my laptop). Output in `results/per_creator_2026-11-08_2034.md`:
+
+```
+writer_a (6 in a row)                         200 200 200 200 200 429
+writer_b (1, right after, same address)       200
+script with a new creator_id each time (6)    200 200 200 200 200 200
+```
+
+- **What it catches that per-address limits miss:** One writer flooding can't block other writers on the same address. writer_a got cut off, and writer_b, from the same address, still got through. With per-address limits, a family, a classroom or a library sharing one connection would share 5 per minute, and one busy person would lock out everyone else. It also catches a single account sending from many addresses (a phone, then a laptop, then a VPN), because the count follows the `creator_id`, not the address.
+- **What it costs:** The `creator_id` is whatever the caller types, and nothing checks it. The script that made up a new `creator_id` each time was never limited (6 out of 6 got through). Per-address limits would have stopped that script after 5. This is also why the 32 text attacks in `attacks.csv` never hit my limit: each one used its own `attacker_<id>`. Real per-creator limits would need logged-in accounts, so a `creator_id` can't be made up.
+
 ---
 
 ## Attack Run — Before
@@ -657,6 +670,95 @@ I ran all 56 attacks again with `python run_attacks.py --set attack_set --label 
 - **Criterion 2 is unchanged.** Thresholds do not change scores, and the AI set still scores lower than my writing.
 
 This is the trade the brief warned about. I chose fewer wrong accusations, and the cost is that the service now almost never says "AI" at all.
+
+### Second Improvement (stretch)
+
+**What I changed:** On top of the first fix, I moved the human line up from 0.35 to 0.45 (`HUMAN_THRESHOLD` in `config.py`). Nothing else changed. The AI line stayed at 0.75.
+
+**Which diagnosis pointed at it:** Problem 2. Real writing on both sides landed between 0.31 and 0.72, so the human label (0.35 or less) was almost never reached. Criterion 3 missed partly because the human label never appeared in my 12 passages.
+
+**Attack Run — After 2:** `python run_attacks.py --set attack_set --label after2`, in `results/attack_run_2026-11-08_2031_after2.md`. Same held-or-broke rules.
+
+**Result: 12 broke, 44 held**, the same count as after the first fix. But more AI text now gets the human label instead of "unsure".
+
+| ID | Family | Targeting | Status | Guess | Combined | Model | Style | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| EV01 | evasion | signal two: typos raise word variety | 200 | human | 0.306 | 0.164 | 0.519 | **BROKE** |
+| EV02 | evasion | signal two: broken-up sentences raise length spread | 200 | human | 0.446 | 0.594 | 0.222 | **BROKE** |
+| EV03 | evasion | signal two: a pasted quotation changes the shape | 200 | unsure | 0.512 | 0.666 | 0.281 | **BROKE** |
+| EV04 | evasion | signal one: unusual words raise perplexity | 200 | unsure | 0.563 | 0.611 | 0.489 | **BROKE** |
+| EV05 | evasion | both signals: heavy human editing pass | 200 | human | 0.267 | 0.321 | 0.187 | **BROKE** |
+| EV06 | evasion | signal two: one very long sentence and one very short | 200 | unsure | 0.458 | 0.573 | 0.286 | **BROKE** |
+| EV07 | evasion | signal two: padding with punctuation | 200 | unsure | 0.562 | 0.586 | 0.526 | **BROKE** |
+| EV08 | evasion | signal one: text below the token window | 200 | human | 0.342 | 0.245 | 0.488 | **BROKE** |
+| EV09 | evasion | both: AI text with a human opening paragraph bolted on | 200 | unsure | 0.531 | 0.704 | 0.271 | **BROKE** |
+| EV10 | evasion | signal two: repeated stanza structure | 200 | ai | 0.869 | 0.979 | 0.705 | HELD |
+| FP01 | false_positive | plain, clear human writing with no flourishes | 200 | unsure | 0.548 | 0.618 | 0.445 | HELD |
+| FP02 | false_positive | human writing in a formal register | 200 | unsure | 0.688 | 0.739 | 0.612 | HELD |
+| FP03 | false_positive | a non-native English speaker writing carefully | 200 | unsure | 0.707 | 0.805 | 0.560 | HELD |
+| FP04 | false_positive | a student essay written to a rubric | 200 | unsure | 0.682 | 0.833 | 0.455 | HELD |
+| FP05 | false_positive | technical documentation written by a person | 200 | unsure | 0.734 | 0.800 | 0.633 | HELD |
+| FP06 | false_positive | a person imitating a formal template | 200 | unsure | 0.682 | 0.881 | 0.384 | HELD |
+| FP07 | false_positive | human writing that repeats a phrase deliberately | 200 | unsure | 0.700 | 0.882 | 0.459 | HELD |
+| FP08 | false_positive | very short genuine human submission | 200 | human | 0.344 | 0.322 | 0.375 | HELD |
+| PI01 | prompt_injection | instruction to ignore the check | 200 | human | 0.378 | 0.463 | 0.250 | **BROKE** |
+| PI02 | prompt_injection | instruction disguised as a system message | 200 | human | 0.193 | 0.204 | 0.176 | **BROKE** |
+| PI03 | prompt_injection | instruction wrapped in the writer's voice | 200 | unsure | 0.497 | 0.594 | 0.352 | **BROKE** |
+| PI04 | prompt_injection | attempt to make the label text hostile | 200 | human | 0.417 | 0.500 | 0.294 | HELD |
+| PI05 | prompt_injection | attempt to inject into the audit log | 200 | human | 0.423 | 0.640 | 0.096 | HELD |
+| PI06 | prompt_injection | instruction plus real human text | 200 | unsure | 0.510 | 0.558 | 0.438 | HELD |
+| MF01 | malformed | text is only whitespace | 400 | — | — | — | — | HELD |
+| MF02 | malformed | text is a single character | 400 | — | — | — | — | HELD |
+| MF03 | malformed | text is control characters | 200 | human | 0.200 | 0.000 | 0.500 | HELD |
+| MF04 | malformed | text is only punctuation | 200 | human | 0.207 | 0.011 | 0.500 | HELD |
+| MF05 | malformed | text is a very long single word | 200 | unsure | 0.700 | 0.998 | 0.500 | HELD |
+| MF06 | malformed | text is emoji only | 200 | unsure | 0.700 | 0.997 | 0.500 | HELD |
+| MF07 | malformed | text is right-to-left script | 200 | unsure | 0.700 | 0.906 | 0.500 | HELD |
+| MF08 | malformed | text is 60,000 characters | 413 | — | — | — | — | HELD |
+| RQ01 | malformed | no text field at all | 400 | — | — | — | — | HELD |
+| RQ02 | malformed | no creator_id | 200 | human | 0.424 | 0.239 | 0.700 | HELD |
+| RQ03 | malformed | text is a number | 400 | — | — | — | — | HELD |
+| RQ04 | malformed | text is a list | 400 | — | — | — | — | HELD |
+| RQ05 | malformed | text is null | 400 | — | — | — | — | HELD |
+| RQ06 | malformed | creator_id is an object | 200 | human | 0.230 | 0.049 | 0.500 | HELD |
+| RQ07 | malformed | body is a JSON array, not an object | 400 | — | — | — | — | HELD |
+| RQ08 | malformed | body is unparseable JSON | 400 | — | — | — | — | HELD |
+| RQ09 | malformed | body is empty | 400 | — | — | — | — | HELD |
+| RQ10 | malformed | body is form-encoded, not JSON | 429 | — | — | — | — | HELD |
+| RQ11 | malformed | body is JSON claiming to be plain text | 429 | — | — | — | — | HELD |
+| RQ12 | malformed | deeply nested JSON | 400 | — | — | — | — | HELD |
+| FL01_01 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_02 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_03 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_04 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_05 | flood_same_creator | 20 rapid submissions from one creator | 200 | human | 0.297 | 0.029 | 0.700 | HELD |
+| FL01_06 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_07 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_08 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_09 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_10 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_11 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+| FL01_12 | flood_same_creator | 20 rapid submissions from one creator | 429 | — | — | — | — | HELD |
+
+**Run Log — After 2** (the third run log): `python run_eval.py --label after2` (`results/run_2026-11-08_2032_after2.md`) and `python criteria_extra.py --label after2` (`results/criteria_extra_2026-11-08_2033_after2.md`). The criteria and tests are unchanged.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict | After fix 1 | Before |
+|---|---|---|---|---|---|---|---|
+| 1. My own writing flagged as AI | ≤ 1 of 10 | 0/10 | 0/10 | 0/10 | MET | MET | MISSED |
+| 2. AI set average minus my writing's average | ≥ +0.20 | −0.024 | −0.024 | −0.024 | MISSED | MISSED | MISSED |
+| 3. Boundary scores correct, and all three labels appear in 12 passages | 5 of 5 boundaries, 3 of 3 labels | 4/5, 2 of 3 labels | 4/5, 2 of 3 labels | 4/5, 2 of 3 labels | MISSED | MISSED (4/5, 1 of 3) | MISSED (5/5, 2 of 3) |
+| 4. Appeals confirmed and logged, original kept | 5 of 5 | 5/5 | 5/5 | 5/5 | MET | MET | MET |
+| 5. Invalid input gets a 4xx, junk text never gets "ai" | 6 of 6 and 3 of 3 | 6/6, 3/3 | 6/6, 3/3 | 6/6, 3/3 | MET | MET | MET |
+
+**Did it help:** **Not really. It made things worse in a way the scores don't show at first.**
+
+- **What it fixed:** The human label is reachable again. In criterion 3 the 12 passages went from 1 label back to 2 (human and unsure).
+- **But the passage that got "human" there was AI text.** It was the AI passage about quantum and classical models (0.4386). In the AI set, 2 of the 10 AI passages now get "human" (before: 1). Of my own 10 pieces, only 1 gets "human" (the thesis piece, 0.377).
+- **In the attack set, AI text labelled "human" went from 4 to 7.** EV02, PI01 and PI05 moved from "unsure" to "human". The broke count stayed at 12 only because I already counted "unsure" as getting through. Now the service is telling the reader "We think this was probably written by a person" about more AI text.
+- **Criterion 3 is still missed.** The AI label is still never reached by real passages (that is the cost of fix 1), and the 0.70 boundary still returns "unsure".
+- **How I know:** The scores are the same in all three runs. Only the lines moved, so every change in a label comes from the threshold and nothing else.
+
+Moving thresholds can only shuffle where the same scores land. It can't separate human from AI text when my signals score them about the same (Problem 2). If I kept one fix, I would keep the first one and undo this one.
 
 
 

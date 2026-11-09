@@ -78,7 +78,9 @@ MAX_TEXT_CHARS = 20000
 # getting through. There is no setting that avoids the trade — only settings
 # that decide who pays for it.
 
-HUMAN_THRESHOLD = 0.35
+# Unit 8, improvement 2 (stretch): was 0.35. Real writing landed between
+# 0.31 and 0.72, so the human label was almost never reached (criterion 3).
+HUMAN_THRESHOLD = 0.45
 # Unit 8, improvement 1: was 0.70. All four false positives (two of my own
 # pieces, FP03, FP05) scored 0.702-0.734, just over the old line.
 AI_THRESHOLD = 0.75
