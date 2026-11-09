@@ -249,6 +249,11 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 
 **Declared before building:** I am going for **a second measured improvement**. After my first fix, I will make one more change based on my diagnoses, run my criteria and the attack set again, and say whether it helped.
 
+**Also declared before building (added after the criteria run, before any work on these):**
+
+- **Per-creator limits.** My limiter will count requests per `creator_id` instead of per address. I will test that two writers on the same address get separate limits, and write down which abuse this catches that per-address limits miss, and what it costs.
+- **Three attacks on someone else's system.** I will write three attacks against a classmate's Provenance Guard service and report what each one did. This depends on getting access to another team's running service.
+
 ---
 
 ## Rate Limiting
