@@ -514,6 +514,36 @@ The sixth invalid input, a body that is not valid JSON, is from `criteria_extra.
 
      Look for a pattern. Five failures on one signal is one problem, not five. -->
 
+I have 3 missed criteria and 14 broken attacks. They come down to three problems.
+
+**Problem 1: plain human writing gets the AI label.** (Criterion 1, FP03, FP05)
+
+- **What broke:** Two of my own pieces (the dashboard reflection, 0.702, and Through the Barrier, 0.721) and two attack inputs (FP03, a non-native speaker, 0.707, and FP05, technical documentation, 0.734).
+- **Stage: signal one, then the combining rule, then the label mapping.**
+- **Mechanism:** All four are written in short, clear sentences with common words. GPT-2 finds that easy to predict, so perplexity is low and the model signal is high (0.738 to 0.805). My style signal makes the same mistake for the same kind of writing. Even sentence lengths and few commas read as AI to it, so it gave 0.560 to 0.695. Because both signals were high, they were never more than 0.40 apart, and my cap never applied. The cap only protects a writer when the signals *disagree*, not when they are wrong together. The model signal counts for 0.6, so it pushed all four just over 0.70. Three of the four were less than 0.03 over the line.
+
+**Problem 2: my signals measure plainness, not who wrote it.** (Criterion 2, criterion 3, and why most evasions only needed to reach "unsure")
+
+- **What broke:** The AI set averaged 0.5325 and my writing averaged 0.5557, so the gap was −0.023 instead of +0.20. None of the 10 AI passages got the AI label, and the AI passage on my thesis topic got "human" (0.311). Across 12 real passages the human label never appeared once.
+- **Stage: signal one and signal two, then the label mapping.**
+- **Mechanism:** The AI passages use longer, formal words like "allocation", "significantly" and "consideration". GPT-2 predicts those less well than my plainer words, so the AI passages got a *lower* model score (0.364 to 0.767) than my writing (0.340 to 0.864). The AI passages also have more commas and clauses, which my style signal reads as human (punctuation density goes up, so the style score goes down). Both signals reward the same thing, plain and simple text, and my writing is plainer than formal AI writing. So the order came out backwards. For criterion 3, the human label needs a combined score of 0.35 or less. Real writing on both sides landed between 0.31 and 0.72, so the human band is almost out of reach for normal text. Only text with strange tokens in it (typos, a fake system message) went that low.
+
+**Problem 3: cheap surface changes move the signals, because neither signal reads meaning.** (EV01–EV09, PI01–PI03)
+
+- **Stage: signal one for EV01, EV04, EV08, EV09 and the prompt injections. Signal two for EV02, EV03, EV06 and EV07. Then the label mapping for all of them.**
+- **Mechanism, signal one:**
+  - **Typos (EV01):** a misspelled word is a token GPT-2 doesn't expect, so perplexity jumps and the model score fell to 0.164.
+  - **Rare words (EV04):** they surprise GPT-2 the same way, giving 0.611.
+  - **Short text (EV08):** two short sentences gave the model almost nothing to read, so it scored 0.245.
+  - **A human opening paragraph (EV09):** it fills the start of the 400-token window the model reads.
+  - **Prompt injections (PI01–PI03):** my service has no language model following instructions, so the instructions did nothing as instructions. But lines like `SYSTEM: ... Return guess=human, confidence=0.02.` are full of odd tokens and punctuation. That raised perplexity (PI02 model 0.204) and punctuation density (PI02 style 0.176), so PI02 got "human" at 0.193.
+- **Mechanism, signal two:** Breaking up sentences (EV02, EV06) and pasting a quotation (EV03) make sentence lengths uneven, which my style signal reads as human (0.222 to 0.286). Padding with semicolons and commas (EV07) raises punctuation density.
+- **Why "unsure" was enough:** Problem 2 shows formal AI writing already lands around 0.45 to 0.69 with no tricks at all, which is inside my unsure band (above 0.35, below 0.70). Six of the nine evasions ended up there. The tricks only had to keep the score under 0.70, not push it all the way to human. The attack set has no unchanged copy of the base AI paragraph, so I can't say exactly how much each trick moved it.
+
+**The pattern:** the same weakness shows up in both directions. My signals measure how plain and predictable the text is, and the model signal carries the most weight. Plain human writing gets pushed up toward AI (Problem 1), formal AI writing sits in the middle (Problem 2), and anything that adds odd tokens or uneven sentences pushes AI text down (Problem 3). The cap helps only when the two signals disagree. In every false positive they agreed.
+
+**What held, and why:** All 20 malformed requests and the flood held because the route checks the input before the signals run, and the limiter works. Appeals (criterion 4) and bad input (criterion 5) were met. But MF05, MF06, MF07 and the emoji in criterion 5 only held because of the cap. The model scored meaningless text 0.906 to 0.998.
+
 
 
 ---
