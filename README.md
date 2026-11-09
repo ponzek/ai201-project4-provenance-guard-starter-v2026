@@ -241,6 +241,12 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 - *What came back:* It said criterion 5 could not fail, because the code already handled every bad input on my list, and suggested a harder test.
 - *What I changed:* I rewrote criterion 5 and then asked for it to be repeatable. It now lists six invalid inputs and three exact strings, `!!!!!!!!`, `........` and a string of emoji. It says a miss is any of those three returning `guess` equal to "ai". I also told the assistant not to clear the audit log and to keep the earlier test entries.
 
+**Moment 3 (unit 8)**
+
+- *What I asked for:* I had my coding assistant turn on the rate limiter, run the attack set and my criteria, and draft the unit 8 sections. It also wrote two test scripts (`criteria_extra.py` for the checks `run_eval.py` can't send, and `per_creator_check.py` for the stretch) and the 10 AI passages for criterion 2.
+- *What came back:* At first it got ahead of me and started changing files and writing my README before I had shared the assignment. I had it undo everything and go one milestone at a time, showing me each step before committing. After that it proposed held-or-broke marks for every attack and grouped the failures into three patterns for the diagnoses.
+- *What I changed or decided:* I gave it 10 pieces of my own writing for criterion 1, because AI text there would make the test meaningless. I agreed to the rule that "unsure" counts as broke for AI text, chose which stretch items to go for, and told it not to commit anything that wasn't needed. I also kept my criteria and tests the same after the fixes, even when that made criterion 3 look worse.
+
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
 ---
@@ -253,6 +259,8 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 
 - **Per-creator limits.** My limiter will count requests per `creator_id` instead of per address. I will test that two writers on the same address get separate limits, and write down which abuse this catches that per-address limits miss, and what it costs.
 - **Three attacks on someone else's system.** I will write three attacks against a classmate's Provenance Guard service and report what each one did. This depends on getting access to another team's running service.
+
+**Status:** The second improvement and per-creator limits are done (see **Second Improvement (stretch)** and **Per-creator limits (stretch)** below). I did not do the three attacks on another team's system, because I did not get access to another team's running service before the deadline.
 
 ---
 
@@ -769,12 +777,30 @@ Moving thresholds can only shuffle where the same scores land. It can't separate
 <!-- For each attack still getting through and each criterion still missed:
      what you'd do, and why you stopped. -->
 
+The service I am submitting has both fixes in `config.py`: AI line 0.75, human line 0.45.
 
+| What's still broken | What I'd do | Why I stopped |
+|---|---|---|
+| **Typos, rare words and odd instruction text** (EV01, EV04, PI01, PI02, PI03) | Clean the text before signal one sees it: fix spelling, and strip lines that look like instructions to a system (`SYSTEM:`, "ignore all previous instructions"). | That is a change to the input before the signals, so it would be a third change in one unit. The brief allows one, plus the stretch. |
+| **Broken-up sentences, a pasted quote, punctuation padding** (EV02, EV03, EV06, EV07) | Make signal two harder to push around. For example, ignore quoted text and cap how much punctuation can count. | Signal two would need rebuilding and recalibrating against the four Milestone 4 inputs. That's a project on its own. |
+| **A human opening bolted onto AI text** (EV09) | Score the text in several windows instead of only the first 400 tokens, and use the highest window. | A rebuild of signal one, and it would slow down every submission. |
+| **Very short text** (EV08) | Raise the minimum length, or always give "unsure" below about 50 words. | It would also change what short human pieces like FP08 get, so it needs its own test. |
+| **Heavy human editing** (EV05) | Nothing. After that much editing it is fair to call it the writer's own work. | I don't think this one should be caught. |
+| **Criterion 2: AI text scores no higher than my writing** | Use a signal that measures something besides plainness, such as a larger model than GPT-2, and check it against plain human writing before trusting it. | Thresholds can't fix this, because both fixes left every score exactly the same. It needs a new signal. |
+| **Criterion 3: the AI label is out of reach and the 0.70 boundary fails** | I'd pick a line between 0.70 and 0.75 after testing more of my own writing. I would not lower it back to 0.70, because that brings back the false positives. | Fix 1 caused this. I'm leaving it, because accusing writers is the worse mistake. |
+| **Junk text labelled human, and junk saved only by the cap** (MF03, MF04, MF05–07, the emoji) | Reject text with fewer than five real words before it reaches the signals, and return a 400 like the other bad input. | That's input validation, a third change. Also, nothing here was labelled AI, so these held. |
+| **RQ10 and RQ11 never reached my route** | Count rejected malformed requests separately from real submissions, so a burst of bad requests doesn't use up an address's limit. | They got a clean 429 and nothing broke. It only matters if real users share an address with a broken client. |
+| **Anyone can make up a `creator_id`** | Require a login, so the limit follows a real account. | That's outside this project. |
+| **Fix 2 pushed more AI text to "human"** | Undo it and keep only fix 1. | I'm leaving it in so the code matches my last measured run, and saying so here instead. |
+
+I also ran out of time. I have another assignment due right after this one.
 
 **The trade I'd make if this ran for real:**
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
      Say which way you'd go and WHO PAYS FOR IT. -->
+
+I would keep the AI line high (0.75) and accept that more AI text gets through, because a wrong accusation falls on one real person, and my results show it falls on careful writers like FP03, a non-native speaker, or on plain writing like my own. The people who pay for that choice are the site and the honest writers whose work sits next to AI text that wasn't caught, a cost that is spread out and easier to live with than an accusation aimed at one person.
 
 
 
