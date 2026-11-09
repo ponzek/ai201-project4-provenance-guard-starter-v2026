@@ -49,6 +49,18 @@ should receive the high-confidence AI label in each of three trials.
 to be wrongly accused of using AI. Simple writing can get a high AI
 score, so I want my system to be careful.
 
+> **Revised in unit 8:** The 10 passages are pieces I wrote myself without
+> AI help: course reflections, project notes, two work emails and a personal
+> reflection. They are copied word for word into `scenarios.py` as
+> `MY_WRITING`, in the scenario named "my own writing", so anyone can run the
+> same set with `python run_eval.py`. The target has not changed: no more than
+> 1 of the 10 gets `guess` equal to "ai" in each of three trials.
+>
+> **Why revised:** My unit 7 feedback said a reader could not put together
+> the test set, because I said "10 human-written passages" without saying
+> whose writing or where it came from. I wrote this revision before running
+> the test.
+
 ---
 
 ## 2. Check the difference between scores

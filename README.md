@@ -417,17 +417,85 @@ FP03. It is a person writing carefully in English as a second language about the
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. My own writing flagged as AI | ≤ 1 of 10 | 2/10 | 2/10 | 2/10 | MISSED |
+| 2. AI set average minus my writing's average | ≥ +0.20 | −0.023 | −0.023 | −0.023 | MISSED |
+| 3. Boundary scores correct, and all three labels appear in 12 passages | 5 of 5 boundaries, 3 of 3 labels | 5/5, 2 of 3 labels | 5/5, 2 of 3 labels | 5/5, 2 of 3 labels | MISSED |
+| 4. Appeals confirmed and logged, original kept | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Invalid input gets a 4xx, junk text never gets "ai" | 6 of 6 and 3 of 3 | 6/6, 3/3 | 6/6, 3/3 | 6/6, 3/3 | MET |
 
-**Real output from one trial**, pasted as text, naming the file and function
-that produced it:
+**How I ran it:** `python run_eval.py --label before` ran the scenarios in `scenarios.py` three times. Its output is in `results/run_2026-11-08_2002_before.md`. Three of my checks can't be sent by `run_eval.py`: the boundary scores (criterion 3), the appeals (criterion 4), and a body that is not valid JSON (criterion 5). I wrote `criteria_extra.py` for those and ran it three times with `python criteria_extra.py --label before`. Its output is in `results/criteria_extra_2026-11-08_2002_before.md`. I changed nothing between trials.
+
+All three trials came out exactly the same. Neither signal is random, so that is expected.
+
+**How I decided each verdict:**
+
+1. **MISSED.** 2 of my 10 pieces got the AI label in every trial. My target allows at most 1.
+2. **MISSED.** The AI set averaged 0.5325 and my writing averaged 0.5557. The AI set scored 0.023 *lower* than my writing, and my target needed it to be at least 0.20 higher.
+3. **MISSED.** All five boundary scores gave the right label in every trial. But across the 12 passages, the human label never appeared (0 human, 10 unsure, 2 ai). My target needs all three labels.
+4. **MET.** All 5 appeals in every trial came back `under_review`. Each one added an appeal entry to the log with my reasoning, and the original decision stayed in the log.
+5. **MET.** All six invalid inputs got a 4xx in every trial. Of the three junk strings, `!!!!!!!!` and `........` got a 400, and the emoji string got "unsure". None got "ai".
+
+**Real output from one trial** (trial 1 of each):
+
+**Criterion 1.** From `run_eval.py::main`, in `results/run_2026-11-08_2002_before.md`. These are my two pieces that got the AI label, plus my lowest-scoring piece for comparison.
 
 ```json
+{"status": 200, "guess": "ai", "confidence": 0.7021, "model_score": 0.7713, "style_score": 0.5983, "label": "Our tools think this was probably written with the help of AI. They can be wrong. If you wrote it yourself, you can appeal and a person will take a look.", "sent": "I liked that the enrollment dashboard gave me a quick overview and sti"}
+{"status": 200, "guess": "ai", "confidence": 0.7208, "model_score": 0.7379, "style_score": 0.6952, "label": "Our tools think this was probably written with the help of AI. They can be wrong. If you wrote it yourself, you can appeal and a person will take a look.", "sent": "For my quantum tunneling project, I wanted people to be able to change"}
+{"status": 200, "guess": "unsure", "confidence": 0.3769, "model_score": 0.3399, "style_score": 0.4325, "label": "We can't tell. This text has some features of both human and AI writing, and plenty of people write this way. Nothing is being held against you.", "sent": "For my thesis, I'm comparing four ways to generate a mammography repor"}
+```
 
+**Criterion 2.** From `run_eval.py::main`, in `results/run_2026-11-08_2002_before.md`. These are the highest and lowest AI passages, and one from the middle. The highest still only got "unsure", and the AI passage on my thesis topic got "human".
+
+```json
+{"status": 200, "guess": "unsure", "confidence": 0.6859, "model_score": 0.7674, "style_score": 0.5637, "label": "We can't tell. This text has some features of both human and AI writing, and plenty of people write this way. Nothing is being held against you.", "sent": "Understanding SQL triggers can be challenging, particularly when it co"}
+{"status": 200, "guess": "human", "confidence": 0.3111, "model_score": 0.3642, "style_score": 0.2314, "label": "We think this was probably written by a person.", "sent": "This thesis compares four approaches to generating mammography reports"}
+{"status": 200, "guess": "unsure", "confidence": 0.5572, "model_score": 0.7253, "style_score": 0.305, "label": "We can't tell. This text has some features of both human and AI writing, and plenty of people write this way. Nothing is being held against you.", "sent": "Being a first-generation student comes with unique challenges, includi"}
+```
+
+**Criterion 3.** The boundary scores are from `criteria_extra.py::boundary_trial`, which calls `scoring.py::score_to_label`, in `results/criteria_extra_2026-11-08_2002_before.md`:
+
+```json
+{"score": 0.0, "expected": "human", "guess": "human", "ok": true}
+{"score": 0.35, "expected": "human", "guess": "human", "ok": true}
+{"score": 0.525, "expected": "unsure", "guess": "unsure", "ok": true}
+{"score": 0.7, "expected": "ai", "guess": "ai", "ok": true}
+{"score": 1.0, "expected": "ai", "guess": "ai", "ok": true}
+```
+
+The label counts for the 12 passages are from `run_eval.py::main` ("label coverage" in `results/run_2026-11-08_2002_before.md`): `{"human": 0, "unsure": 10, "ai": 2}`
+
+**Criterion 4.** From `criteria_extra.py::appeal_trial`, in `results/criteria_extra_2026-11-08_2002_before.md`. This is the first of the five:
+
+```json
+{"content_id": "5c39d24c-9046-482c-be51-71b06aa085ee", "submit_status": 200, "guess": "unsure", "appeal_status_code": 200, "appeal_response": {"content_id": "5c39d24c-9046-482c-be51-71b06aa085ee", "message": "Thanks. Your appeal was recorded and a person will review it.", "status": "under_review"}, "log_original_decision_kept": true, "log_appeal_entry": {"content_id": "5c39d24c-9046-482c-be51-71b06aa085ee", "creator_id": "eval_c4_t1_1", "event": "appeal", "reasoning": "I wrote this myself. This is a test appeal for criterion 4.", "status": "under_review", "timestamp": "2026-11-09T01:02:35+00:00"}, "ok": true}
+```
+
+**Criterion 5.** From `run_eval.py::main`, in `results/run_2026-11-08_2002_before.md`. In order: missing text, empty text, only spaces, a number, 20,001 characters, `!!!!!!!!`, `........`, emoji. I shortened the 20,001-character `sent` value.
+
+```json
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "{\"creator_id\": \"eval_c5_missing\"}"}
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "(empty text)"}
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "     "}
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "{\"text\": 12345, \"creator_id\": \"eval_c5_number\"}"}
+{"status": 413, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..."}
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "!!!!!!!!"}
+{"status": 400, "guess": null, "confidence": null, "model_score": null, "style_score": null, "label": null, "sent": "........"}
+{"status": 200, "guess": "unsure", "confidence": 0.65, "model_score": 0.9921, "style_score": 0.5, "label": "We can't tell. This text has some features of both human and AI writing, and plenty of people write this way. Nothing is being held against you.", "sent": "😀😀😀😀😀😀😀😀"}
+```
+
+`run_eval.py` does not save the error message, so here are the matching rejection entries from `logs/audit.jsonl`, written by `audit.py::log_rejection`. They show why each one was refused:
+
+```json
+{"timestamp": "2026-11-09T01:02:34+00:00", "content_id": null, "creator_id": "eval_c5_missing", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "invalid_text"}
+{"timestamp": "2026-11-09T01:02:34+00:00", "content_id": null, "creator_id": "eval_c5_20001", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "text_too_long"}
+{"timestamp": "2026-11-09T01:02:34+00:00", "content_id": null, "creator_id": "eval_c5_bangs", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "text_too_short"}
+```
+
+The sixth invalid input, a body that is not valid JSON, is from `criteria_extra.py::invalid_json_trial`:
+
+```json
+{"sent": "{\"text\": \"not closed", "status": 400, "response": {"error": "invalid_text", "message": "Send JSON with a non-empty 'text' string."}, "ok": true}
 ```
 
 **Diagnoses**
