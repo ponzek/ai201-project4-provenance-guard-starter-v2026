@@ -244,8 +244,8 @@ The original decision (`"status":"decided"`) stays in the log and the appeal is 
 **Moment 3 (unit 8)**
 
 - *What I asked for:* I had my coding assistant turn on the rate limiter, run the attack set and my criteria, and draft the unit 8 sections. It also wrote two test scripts (`criteria_extra.py` for the checks `run_eval.py` can't send, and `per_creator_check.py` for the stretch) and the 10 AI passages for criterion 2.
-- *What came back:* At first it got ahead of me and started changing files and writing my README before I had shared the assignment. I had it undo everything and go one milestone at a time, showing me each step before committing. After that it proposed held-or-broke marks for every attack and grouped the failures into three patterns for the diagnoses.
-- *What I changed or decided:* I gave it 10 pieces of my own writing for criterion 1, because AI text there would make the test meaningless. I agreed to the rule that "unsure" counts as broke for AI text, chose which stretch items to go for, and told it not to commit anything that wasn't needed. I also kept my criteria and tests the same after the fixes, even when that made criterion 3 look worse.
+- *What came back:* At first it got ahead of me and started changing files and writing my README before I had explained what needed to be done. I had it undo everything and go through one milestone at a time, before committing I had to look through everything. After that it proposed held-or-broke marks for every attack and grouped the failures into three patterns for the diagnoses.
+- *What I changed or decided:* I gave it 10 pieces of my own writing for criterion 1, because AI text there would make the test meaningless. I agreed to the rule that "unsure" counts as broke for AI text, chose which stretch items to go for. I also kept my criteria and tests the same after the fixes, even when that made criterion 3 look worse.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
